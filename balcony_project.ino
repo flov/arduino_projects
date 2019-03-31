@@ -19,9 +19,23 @@ int sensorResult;        // scaled sensor data [0..3] = [wet, damp, moist, dry]
 const int highestDryReading = 808;
 const int lowestWetReading = 400;
 
+// make some custom characters:
+byte heart[8] = {
+  0b00000,
+  0b01010,
+  0b11111,
+  0b11111,
+  0b11111,
+  0b01110,
+  0b00100,
+  0b00000
+};
+
 void setup() {
   Serial.begin(9200);
   lcd.begin(16, 2);
+  // create a new character
+  lcd.createChar(0, heart);
   pinMode(pumpPin, OUTPUT);
 }
 
@@ -48,23 +62,41 @@ void loop() {
   switch (sensorResult) {
     case 0:
       lcd.print("Wet");
+      turnPumpOff();
       break;
     case 1:
       lcd.print("Damp");
+      turnPumpOff();
       break;
     case 2:
       lcd.print("Moist");
+      turnPumpOff();
       break;
     case 3:
       lcd.print("Dry");
+      turnPumpOn();
       break;
     case 4:
       lcd.print("Bone Dry");
+      turnPumpOn();
       break;
   }
 
-  lcd.setCursor(0,1);
-  lcd.print(I);
   delay(1000);
 }
 
+void turnPumpOn() {
+  digitalWrite(pumpPin, HIGH);
+  lcd.setCursor(0,1);
+  // Print a message to the lcd.
+  lcd.print("Watering...");
+}
+
+void turnPumpOff() {
+  digitalWrite(pumpPin, LOW);
+  lcd.setCursor(0,1);
+  // Print a message to the lcd.
+  lcd.print("   I ");
+  lcd.write(byte(0)); // when calling lcd.write() '0' must be cast as a byte
+  lcd.print(" Hause!");
+}
