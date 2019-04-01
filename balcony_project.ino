@@ -16,6 +16,10 @@ int moistSensor = A0;    // <-- change this to the pin for the moisture sensor
 int moisture = 0;
 int validMoisture = 0;
 int sensorResult;        // scaled sensor data [0..3] = [wet, damp, moist, dry]
+int countdown;
+unsigned long msPassed;
+unsigned long timer;
+
 const int highestDryReading = 808;
 const int lowestWetReading = 400;
 
@@ -88,8 +92,23 @@ void loop() {
 void turnPumpOn() {
   digitalWrite(pumpPin, HIGH);
   lcd.setCursor(0,1);
-  // Print a message to the lcd.
   lcd.print("Watering...");
+  // Print a message to the lcd.
+  timer = millis();
+  msPassed = 0;
+  while(msPassed <= 60000){
+    msPassed = millis() - timer;
+    countdown = 60 - abs(msPassed / 1000);
+    Serial.println(abs(msPassed / 1000));
+    lcd.setCursor(13,1);
+    if (countdown < 10) {
+      lcd.print(" ");
+      lcd.print(countdown);
+    } else {
+      lcd.print(countdown);
+    }
+    delay(1000);
+  }
 }
 
 void turnPumpOff() {
@@ -99,4 +118,5 @@ void turnPumpOff() {
   lcd.print("   I ");
   lcd.write(byte(0)); // when calling lcd.write() '0' must be cast as a byte
   lcd.print(" Hause!");
+  delay(10000);
 }
