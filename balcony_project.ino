@@ -46,8 +46,8 @@ void setup() {
 void loop() {
   moisture = analogRead(moistSensor);  // read the input pin
 
-  // we want to go in steps of 10 to prevent sensor to jump from
-  // dry to wet to wet to dry etc...
+  // Only accept a moisture sensor value with a difference of 10
+  // to prevent the sensor to jump from dry to wet to wet to dry etc...
   if (abs(validMoisture - moisture) > 10) {
     validMoisture = moisture;
   }
@@ -93,7 +93,6 @@ void turnPumpOn() {
   digitalWrite(pumpPin, HIGH);
   lcd.setCursor(0,1);
   lcd.print("Watering...");
-  // Print a message to the lcd.
   timer = millis();
   msPassed = 0;
   while(msPassed <= 60000){
@@ -107,16 +106,26 @@ void turnPumpOn() {
     } else {
       lcd.print(countdown);
     }
+    printMoistValue();
     delay(1000);
   }
 }
 
 void turnPumpOff() {
   digitalWrite(pumpPin, LOW);
+  printILoveHause();
+  printMoistValue();
+  delay(10000);
+}
+
+void printILoveHause() {
   lcd.setCursor(0,1);
-  // Print a message to the lcd.
   lcd.print("   I ");
   lcd.write(byte(0)); // when calling lcd.write() '0' must be cast as a byte
   lcd.print(" Hause!");
-  delay(10000);
+}
+
+void printMoistValue() {
+  lcd.setCursor(11,0);
+  lcd.print(validMoisture);
 }
