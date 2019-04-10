@@ -1,17 +1,22 @@
 /*********************************************************************
-  This is my implementation of automatically hosing the plants on 
-  the balcony when the earth becomes too dry.
-  Soil is measured with a Capacity Soil Moisture Sensor v1.2
+  This is my implementation of my water irrigation system on my balcony.
+  When the earth becomes too dry it triggers the pump which
+  is in a water bucket. The pump pumps water into the pipes which waters
+  the soil. Soil is measured with a Capacity Soil Moisture Sensor v1.2
 
 *********************************************************************/
 
 #include <LiquidCrystal.h>
 #include "DHT.h"
+#include <SPI.h>
+#include <SD.h>
+File myFile;
 
 const int rs = 7, en = 6, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
-const int pumpPin     = 13;   // <-- change this to the pin for the pump
-const int moistSensor = A0;   // <-- change this to the pin for the moisture sensor
-const int dhtPin      = 8;    // <-- change this to the pin for the DHT11 temp sensor
+const int pumpPin     = 13;   // <-- pin for the pump
+const int moistSensor = A0;   // <-- pin for the moisture sensor
+const int dhtPin      = 8;    // <-- pin for the DHT11 temp sensor
+const int sdChipPin   = 10;   // <-- Adafruit has pin 10, don't use 10 as another pin
 #define DHTTYPE DHT11
 
 // initialize the LCD with the numbers of the interface pins
@@ -22,10 +27,8 @@ DHT dht(dhtPin, DHTTYPE);
 int moisture = 0;
 int validMoisture = 0;
 int sensorResult;        // scaled sensor data [0..3] = [wet, damp, moist, dry]
-int countdown;
 unsigned long msPassed;
 unsigned long msTurnOnPump;
-unsigned long timer;
 
 const int highestDryReading = 808;
 const int lowestWetReading = 400;
@@ -46,6 +49,7 @@ void setup() {
   Serial.begin(9200);
   lcd.begin(16, 2);
   dht.begin();
+  initializeSDCardReader();
   // create a new character
   lcd.createChar(0, heart);
   pinMode(pumpPin, OUTPUT);
@@ -53,6 +57,7 @@ void setup() {
 
 void loop() {
   moisture = analogRead(moistSensor);  // read the input pin
+  myFile = SD.open("hause.txt", FILE_WRITE);
 
   // Only accept a moisture sensor value with a difference of 10
   // to prevent the sensor to jump from dry to wet to wet to dry etc...
@@ -62,11 +67,14 @@ void loop() {
 
   // scale analog input to a smaller range for wet to dry
   sensorResult = map(validMoisture, lowestWetReading, highestDryReading, 0, 4);
-  Serial.println(validMoisture);
   lcd.clear();
+
+  printTimestamp();
+  printTemperature();
+  printMoisture();
+
   lcd.setCursor(0,0);
   lcd.print("Soil: ");
-
   switch (sensorResult) {
     case 0:
       lcd.print("Wet");
@@ -90,44 +98,45 @@ void loop() {
       break;
   }
 
-  delay(1000);
+  countDown(10000);
+  Serial.println();
+  myFile.print("\n");
+  myFile.close();
 }
 
 void turnPumpOn() {
   digitalWrite(pumpPin, HIGH);
   lcd.setCursor(8,1);
   lcd.print("PumpOn");
-  printTemperature();
-  timer = millis();
-  msPassed = 0;
-  // Turn pump on for msTurnOnPump ms
-  msTurnOnPump = 5000;
-  while(msPassed <= msTurnOnPump){
-    msPassed = millis() - timer;
-    countdown = (msTurnOnPump / 1000) - (msPassed / 1000);
-    lcd.setCursor(14,1);
-    if (countdown < 10) {
-      lcd.print(" ");
-      lcd.print(countdown);
-    } else {
-      lcd.print(countdown);
-    }
-    printMoistValue();
-    delay(1000);
-  }
 }
 
 void turnPumpOff() {
   digitalWrite(pumpPin, LOW);
-  printTemperature();
   // printILoveHause();
-  printMoistValue();
-  delay(5000);
+}
+
+void printTimestamp() {
+  unsigned long ms = millis();
+  if (myFile) {
+    myFile.print(ms);
+    myFile.print(",");
+    Serial.println("Saving timestamp");
+  } else {
+    // if the file didn't open, print an error:
+    Serial.println("error opening test.txt");
+  }
 }
 
 void printTemperature() {
   float temp = dht.readTemperature();
   float humidity = dht.readHumidity();
+  if(myFile) {
+    Serial.println("Saving temp and humiditiy");
+    myFile.print(temp);
+    myFile.print(",");
+    myFile.print(humidity);
+    myFile.print(",");
+  }
   lcd.setCursor(0,1);
   lcd.print(round(temp));
   lcd.print("C ");
@@ -135,14 +144,42 @@ void printTemperature() {
   lcd.print("%");
 }
 
-void printILoveHause() {
-  lcd.setCursor(0,1);
-  lcd.print("   I ");
-  lcd.write(byte(0)); // when calling lcd.write() '0' must be cast as a byte
-  lcd.print(" Hause!");
-}
-
-void printMoistValue() {
+void printMoisture() {
   lcd.setCursor(12,0);
   lcd.print(validMoisture);
+  Serial.print("Moisture: ");
+  Serial.println(validMoisture);
+  if(myFile) {
+    Serial.println("Saving moisture");
+    myFile.print(validMoisture);
+  }
+}
+
+void initializeSDCardReader()
+{
+  Serial.print("Initializing SD card...");
+  if (!SD.begin(sdChipPin)) {
+    Serial.println("initialization failed!");
+    while (1);
+  }
+  Serial.println("initialization done.");
+}
+
+// Counts down the time until the next reading and displays it on LCD
+void countDown(int msToCount) {
+  int counter;
+  unsigned long timer = millis();
+  msPassed = 0;
+  while(msPassed <= msToCount){
+    msPassed = millis() - timer;
+    counter = (msToCount / 1000) - (msPassed / 1000);
+    lcd.setCursor(14,1);
+    if (counter < 10) {
+      lcd.print(" ");
+      lcd.print(counter);
+    } else {
+      lcd.print(counter);
+    }
+    delay(1000);
+  }
 }
