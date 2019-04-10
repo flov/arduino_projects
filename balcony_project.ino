@@ -6,18 +6,25 @@
 *********************************************************************/
 
 #include <LiquidCrystal.h>
-// initialize the library with the numbers of the interface pins
-const int rs = 7, en = 6, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
-LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+#include "DHT.h"
 
-int pumpPin  = 13;       // <-- change this to the pin for the pump
-int moistSensor = A0;    // <-- change this to the pin for the moisture sensor
+const int rs = 7, en = 6, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
+const int pumpPin     = 13;   // <-- change this to the pin for the pump
+const int moistSensor = A0;   // <-- change this to the pin for the moisture sensor
+const int dhtPin      = 8;    // <-- change this to the pin for the DHT11 temp sensor
+#define DHTTYPE DHT11
+
+// initialize the LCD with the numbers of the interface pins
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
+// Initialize DHT sensor.
+DHT dht(dhtPin, DHTTYPE);
 
 int moisture = 0;
 int validMoisture = 0;
 int sensorResult;        // scaled sensor data [0..3] = [wet, damp, moist, dry]
 int countdown;
 unsigned long msPassed;
+unsigned long msTurnOnPump;
 unsigned long timer;
 
 const int highestDryReading = 808;
@@ -38,6 +45,7 @@ byte heart[8] = {
 void setup() {
   Serial.begin(9200);
   lcd.begin(16, 2);
+  dht.begin();
   // create a new character
   lcd.createChar(0, heart);
   pinMode(pumpPin, OUTPUT);
@@ -54,10 +62,6 @@ void loop() {
 
   // scale analog input to a smaller range for wet to dry
   sensorResult = map(validMoisture, lowestWetReading, highestDryReading, 0, 4);
-  Serial.print ("Scaled Sensor Reading 0-4: ");
-  Serial.println (sensorResult);
-  Serial.println ();
-
   Serial.println(validMoisture);
   lcd.clear();
   lcd.setCursor(0,0);
@@ -91,15 +95,17 @@ void loop() {
 
 void turnPumpOn() {
   digitalWrite(pumpPin, HIGH);
-  lcd.setCursor(0,1);
-  lcd.print("Watering...");
+  lcd.setCursor(8,1);
+  lcd.print("PumpOn");
+  printTemperature();
   timer = millis();
   msPassed = 0;
-  while(msPassed <= 60000){
+  // Turn pump on for msTurnOnPump ms
+  msTurnOnPump = 5000;
+  while(msPassed <= msTurnOnPump){
     msPassed = millis() - timer;
-    countdown = 60 - abs(msPassed / 1000);
-    Serial.println(abs(msPassed / 1000));
-    lcd.setCursor(13,1);
+    countdown = (msTurnOnPump / 1000) - (msPassed / 1000);
+    lcd.setCursor(14,1);
     if (countdown < 10) {
       lcd.print(" ");
       lcd.print(countdown);
@@ -113,9 +119,20 @@ void turnPumpOn() {
 
 void turnPumpOff() {
   digitalWrite(pumpPin, LOW);
-  printILoveHause();
+  printTemperature();
+  // printILoveHause();
   printMoistValue();
-  delay(10000);
+  delay(5000);
+}
+
+void printTemperature() {
+  float temp = dht.readTemperature();
+  float humidity = dht.readHumidity();
+  lcd.setCursor(0,1);
+  lcd.print(round(temp));
+  lcd.print("C ");
+  lcd.print(round(humidity));
+  lcd.print("%");
 }
 
 void printILoveHause() {
@@ -126,6 +143,6 @@ void printILoveHause() {
 }
 
 void printMoistValue() {
-  lcd.setCursor(11,0);
+  lcd.setCursor(12,0);
   lcd.print(validMoisture);
 }
