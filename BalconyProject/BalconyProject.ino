@@ -33,25 +33,12 @@ unsigned long msTurnOnPump;
 const int highestDryReading = 808;
 const int lowestWetReading = 400;
 
-// make some custom characters:
-byte heart[8] = {
-  0b00000,
-  0b01010,
-  0b11111,
-  0b11111,
-  0b11111,
-  0b01110,
-  0b00100,
-  0b00000
-};
-
 void setup() {
   Serial.begin(9200);
   lcd.begin(16, 2);
   dht.begin();
   initializeSDCardReader();
   // create a new character
-  lcd.createChar(0, heart);
   pinMode(pumpPin, OUTPUT);
 }
 
@@ -106,13 +93,20 @@ void loop() {
 
 void turnPumpOn() {
   digitalWrite(pumpPin, HIGH);
+  if (myFile) {
+    myFile.print("1");
+    Serial.println("Logging Pump On");
+  }
   lcd.setCursor(8,1);
   lcd.print("PumpOn");
 }
 
 void turnPumpOff() {
+  if (myFile) {
+    myFile.print("0");
+    Serial.println("Logging Pump Off");
+  }
   digitalWrite(pumpPin, LOW);
-  // printILoveHause();
 }
 
 void printTimestamp() {
@@ -152,6 +146,7 @@ void printMoisture() {
   if(myFile) {
     Serial.println("Saving moisture");
     myFile.print(validMoisture);
+    myFile.print(",");
   }
 }
 
