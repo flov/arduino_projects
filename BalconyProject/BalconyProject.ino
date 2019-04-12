@@ -7,9 +7,18 @@
 *********************************************************************/
 
 #include <LiquidCrystal.h>
+// Temperature and humidity library
 #include "DHT.h"
+// SD card reading functions:
 #include <SPI.h>
 #include <SD.h>
+// Date and time functions using a DS1307 RTC connected via I2C and Wire lib
+#include <Wire.h>
+#include "RTClib.h"
+
+RTC_DS1307 rtc;
+char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+
 File myFile;
 
 const int rs = 7, en = 6, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
@@ -40,6 +49,10 @@ void setup() {
   initializeSDCardReader();
   // create a new character
   pinMode(pumpPin, OUTPUT);
+  if (! rtc.begin()) {
+    Serial.println("Couldn't find RTC");
+    while (1);
+  }
 }
 
 void loop() {
@@ -56,7 +69,7 @@ void loop() {
   sensorResult = map(validMoisture, lowestWetReading, highestDryReading, 0, 4);
   lcd.clear();
 
-  printTimestamp();
+  printDateTime();
   printTemperature();
   printMoisture();
 
@@ -107,18 +120,6 @@ void turnPumpOff() {
     Serial.println("Logging Pump Off");
   }
   digitalWrite(pumpPin, LOW);
-}
-
-void printTimestamp() {
-  unsigned long ms = millis();
-  if (myFile) {
-    myFile.print(ms);
-    myFile.print(",");
-    Serial.println("Saving timestamp");
-  } else {
-    // if the file didn't open, print an error:
-    Serial.println("error opening test.txt");
-  }
 }
 
 void printTemperature() {
@@ -177,4 +178,36 @@ void countDown(int msToCount) {
     }
     delay(1000);
   }
+}
+
+void printDateTime() {
+  DateTime now = rtc.now();
+  String dataString = "";
+  int runningSince = millis() / 1000;
+
+  dataString += now.day();
+  dataString += '/';
+  dataString += now.month();
+  dataString += '/';
+  dataString += now.year();
+  dataString += ' ';
+  dataString += now.hour();
+  dataString += ':';
+  dataString += now.minute();
+  dataString += ':';
+  dataString += now.second();
+
+  if (myFile) {
+    myFile.print(dataString);
+    myFile.print(",");
+    myFile.print(runningSince);
+    myFile.print(",");
+    Serial.println("Saving timestamp");
+  } else {
+    // if the file didn't open, print an error:
+    Serial.println("error opening test.txt");
+  }
+
+  Serial.println(dataString);
+  Serial.println(runningSince);
 }
