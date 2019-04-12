@@ -17,7 +17,6 @@
 #include "RTClib.h"
 
 RTC_DS1307 rtc;
-char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 
 File myFile;
 
@@ -78,23 +77,23 @@ void loop() {
   switch (sensorResult) {
     case 0:
       lcd.print("Wet");
-      turnPumpOff();
+      turnPumpOn();
       break;
     case 1:
       lcd.print("Damp");
-      turnPumpOff();
+      turnPumpOn();
       break;
     case 2:
       lcd.print("Moist");
-      turnPumpOff();
+      turnPumpOn();
       break;
     case 3:
       lcd.print("Dry");
-      turnPumpOn();
+      turnPumpOff();
       break;
     case 4:
       lcd.print("Bone Dry");
-      turnPumpOn();
+      turnPumpOff();
       break;
   }
 
