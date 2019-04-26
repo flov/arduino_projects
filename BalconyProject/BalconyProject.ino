@@ -66,10 +66,10 @@ void loop() {
   printTemperature();
   printMoisture();
 
-  // Turns pump on for a minute if the clock shows 07:00 or 19:00 otherwise
+  // Turns pump on for 5 minutes if the clock shows 07:00 or 19:00 otherwise
   // turns the pump off
   now = rtc.now();
-  if ((now.hour() == 7 && now.minute() == 0) || (now.hour() == 19 && now.minute() == 0)) {
+  if ((now.hour() == 7 && now.minute() <= 5) || (now.hour() == 19 && now.minute() <= 0)) {
     turnPumpOn();
   } else {
     turnPumpOff();
